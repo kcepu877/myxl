@@ -40,7 +40,10 @@ def show_main_menu(number, balance, balance_expired_at):
     print("1. Login/Ganti akun")
     print("2. Lihat Paket Saya")
     print("3. Beli Paket XUT")
-    print("4. Beli Paket Berdasarkan Family Code")
+    print("4. Beli Paket XCP")
+    print("5. Beli Paket UNLI")
+    print("6. Beli Paket Berdasarkan Family Code")
+    print("7. Beli Paket Berdasarkan Family Code (Enterprise)")
     print("99. Tutup aplikasi")
     print("--------------------------")
         
@@ -67,6 +70,7 @@ def show_account_menu():
             AuthInstance.add_refresh_token(int(number), refresh_token)
             AuthInstance.load_tokens()
             users = AuthInstance.refresh_tokens
+            active_user = AuthInstance.get_active_user()
             
             
             if add_user:
