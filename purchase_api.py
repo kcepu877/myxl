@@ -3,11 +3,14 @@ import json
 import uuid
 import base64
 import qrcode
+import shutil 
+from PIL import Image
 
 import requests
 from api_request import *
 from crypto_helper import API_KEY, build_encrypted_field, decrypt_xdata, encryptsign_xdata, java_like_timestamp, get_x_signature_payment, get_x_signature_bounty
 import time
+import io
 
 BASE_API_URL = os.getenv("BASE_API_URL")
 AX_DEVICE_ID = os.getenv("AX_DEVICE_ID")
@@ -399,6 +402,7 @@ def get_qris_code(
 def show_qris_payment(api_key: str, tokens: dict, package_option_code: str, token_confirmation: str, price: int, item_name: str = ""):
     print("Fetching payment method details...")
     
+    # Ambil data payment method
     payment_methods_data = get_payment_methods(
         api_key=api_key,
         tokens=tokens,
@@ -409,6 +413,7 @@ def show_qris_payment(api_key: str, tokens: dict, package_option_code: str, toke
     token_payment = payment_methods_data["token_payment"]
     ts_to_sign = payment_methods_data["timestamp"]
     
+    # Buat QRIS transaction
     transaction_id = settlement_qris(
         api_key,
         tokens,
@@ -428,25 +433,38 @@ def show_qris_payment(api_key: str, tokens: dict, package_option_code: str, toke
     if not qris_code:
         print("Failed to get QRIS code.")
         return
-    print(f"QRIS data:\n{qris_code}")
     
+    # Simpan QR sebagai PNG
+    qr_img = qrcode.make(qris_code)
+    qr_img.save("qris.png")
+    print("QR Code berhasil dibuat dan disimpan sebagai 'qris.png'")
+
+    # Tampilkan QR ASCII di tengah tabel terminal
+    terminal_width = shutil.get_terminal_size((80, 20)).columns
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_L,
         box_size=1,
-        border=1,
+        border=1
     )
     qr.add_data(qris_code)
     qr.make(fit=True)
-    qr.print_ascii(invert=True)
-    
+
+    # Tangkap output QR ASCII ke StringIO
+    output = io.StringIO()
+    qr.print_ascii(out=output, invert=True)
+    qr_ascii_lines = output.getvalue().splitlines()
+
+    print("+" + "-"*(terminal_width-2) + "+")
+    for line in qr_ascii_lines:
+        print("|" + line.center(terminal_width-2) + "|")
+    print("+" + "-"*(terminal_width-2) + "+")
+
+    # Tampilkan link QRIS sebagai alternatif
     qris_b64 = base64.urlsafe_b64encode(qris_code.encode()).decode()
     qris_url = f"https://ki-ar-kod.netlify.app/?data={qris_b64}"
-    
-    print(f"Atau buka link berikut untuk melihat QRIS:\n{qris_url}")
-    
+    print(f"\nAtau buka link berikut untuk melihat QRIS:\n{qris_url}\n")
     return
-
 def settlement_bounty(
     api_key: str,
     tokens: dict,
